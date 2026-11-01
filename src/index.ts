@@ -83,6 +83,24 @@ app.get('/api/events', async (req: Request, res: Response) => {
   }
 });
 
+// Get Single Event Details
+app.get('/api/events/:id', async (req: Request, res: Response) => {
+  try {
+    const eventId = req.params.id;
+    if(typeof eventId !== 'string' || !mongoose.Types.ObjectId.isValid(eventId)) {
+        return res.status(400).json({ message: 'Invalid Event ID' });
+    }
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    res.status(200).json(event);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+});
+
 // Database Connection
 mongoose
   .connect(process.env.MONGODB_URI as string)
