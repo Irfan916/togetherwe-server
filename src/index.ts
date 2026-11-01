@@ -125,6 +125,52 @@ app.post('/api/events/:id/join', verifyToken, async (req: AuthRequest, res: Resp
   }
 });
 
+// Update Event (Private - Only Creator)
+app.put('/api/events/:id', verifyToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const event = await Event.findById(req.params.id);
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+
+    // Validation: Only creator can update
+    if (event.creatorEmail !== req.body.creatorEmail) {
+       return res.status(403).json({ message: 'You can only update your own events.' });
+    }
+
+    // Validation: No past dates
+    if (req.body.date) {
+      const eventDate = new Date(req.body.date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); 
+      if (eventDate < today) {
+        return res.status(400).json({ message: 'Event date must be in the future.' });
+      }
+    }
+
+    const updatedEvent = await Event.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.status(200).json({ message: 'Event updated successfully', event: updatedEvent });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+});
+
+// Delete Event (Private - Only Creator)
+app.delete('/api/events/:id', verifyToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const event = await Event.findById(req.params.id);
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+
+    // Validation: Only creator can delete
+    if (event.creatorEmail !== req.body.creatorEmail) {
+       return res.status(403).json({ message: 'You can only delete your own events.' });
+    }
+
+    await Event.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: 'Event deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+});
+
 // Database Connection
 mongoose
   .connect(process.env.MONGODB_URI as string)
