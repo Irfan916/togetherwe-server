@@ -171,6 +171,52 @@ app.delete('/api/events/:id', verifyToken, async (req: AuthRequest, res: Respons
   }
 });
 
+// Get Events Created by User (Manage Events)
+app.get('/api/my-events', verifyToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const email = req.query.email as string;
+    const events = await Event.find({ creatorEmail: email }).sort({ date: -1 });
+    res.status(200).json(events);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+});
+
+// Get Events Joined by User (Joined Events)
+app.get('/api/joined-events', verifyToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const email = req.query.email as string;
+    const events = await Event.find({ attendees: email }).sort({ date: 1 });
+    res.status(200).json(events);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+});
+
+// Dashboard Stats 
+app.get('/api/dashboard-stats', verifyToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const email = req.query.email as string;
+    
+    const eventsCreated = await Event.countDocuments({ creatorEmail: email });
+    const eventsJoined = await Event.countDocuments({ attendees: email });
+    const upcomingCreated = await Event.countDocuments({ creatorEmail: email, date: { $gte: new Date() } });
+    
+    const allEvents = await Event.find({});
+    const uniqueAttendees = new Set();
+    allEvents.forEach(e => e.attendees.forEach(a => uniqueAttendees.add(a)));
+
+    res.status(200).json({
+      eventsCreated,
+      eventsJoined,
+      upcomingCreated,
+      communityMembers: uniqueAttendees.size + 250
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+});
+
 // Database Connection
 mongoose
   .connect(process.env.MONGODB_URI as string)
