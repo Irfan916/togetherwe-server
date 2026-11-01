@@ -43,6 +43,46 @@ app.post('/api/events', verifyToken, async (req: AuthRequest, res: Response) => 
   }
 });
 
+// Get Upcoming Events 
+app.get('/api/events/upcoming', async (req: Request, res: Response) => {
+  try {
+    const today = new Date();
+    
+    const events = await Event.find({ date: { $gte: today } })
+      .sort({ date: 1 })
+      .limit(6);
+
+    res.status(200).json(events);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+});
+
+// Get All Events
+app.get('/api/events', async (req: Request, res: Response) => {
+  try {
+    const today = new Date();
+    const { type, search } = req.query;
+    
+    let query: any = { date: { $gte: today } };
+
+    if (type && type !== 'All Events') {
+      query.eventType = type;
+    }
+    
+    if (search) {
+      query.title = { $regex: search, $options: 'i' };
+    }
+
+    // Sort by newest (date ascending)
+    const events = await Event.find(query).sort({ date: 1 });
+
+    res.status(200).json(events);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+});
+
 // Database Connection
 mongoose
   .connect(process.env.MONGODB_URI as string)
