@@ -101,6 +101,30 @@ app.get('/api/events/:id', async (req: Request, res: Response) => {
   }
 });
 
+// Join Event (Private)
+app.post('/api/events/:id/join', verifyToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const event = await Event.findById(req.params.id);
+    const userEmail = req.body.email;
+
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+
+    // Check if already joined
+    if (event.attendees.includes(userEmail)) {
+      return res.status(400).json({ message: 'You have already joined this event.' });
+    }
+
+    event.attendees.push(userEmail);
+    await event.save();
+
+    res.status(200).json({ message: 'Successfully joined the event!', event });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+});
+
 // Database Connection
 mongoose
   .connect(process.env.MONGODB_URI as string)
