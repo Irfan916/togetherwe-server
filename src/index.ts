@@ -2,6 +2,8 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import { Event } from './models/Event';
+import { verifyToken, AuthRequest } from './middleware/auth';
 
 dotenv.config();
 
@@ -13,6 +15,32 @@ app.use(express.json());
 
 app.get('/', (req: Request, res: Response) => {
   res.status(200).json({ message: 'TogetherWe Server is running!' });
+});
+
+// Create Event Route (Private)
+app.post('/api/events', verifyToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const { title, description, eventType, thumbnail, location, date, creatorEmail, expectedVolunteers } = req.body;
+
+    // Validation: No past dates allowed
+    const eventDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); 
+
+    if (eventDate < today) {
+      return res.status(400).json({ message: 'Event date must be in the future.' });
+    }
+
+    const newEvent = new Event({
+      title, description, eventType, thumbnail, location, 
+      date: eventDate, creatorEmail, expectedVolunteers
+    });
+
+    await newEvent.save();
+    res.status(201).json({ message: 'Event created successfully', event: newEvent });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
 });
 
 // Database Connection
