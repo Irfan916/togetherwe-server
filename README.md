@@ -73,7 +73,7 @@ Before running the server, make sure you have installed:
 ### 1. Clone the Repository
 
 ```bash
-git clone <YOUR_GITHUB_REPOSITORY_URL>
+git clone <[YOUR_GITHUB_REPOSITORY_URL](https://github.com/Irfan916/togetherwe-server.git)>
 ```
 
 Navigate to the backend directory:
@@ -293,6 +293,3 @@ Do not assume deployment is complete until the server, database connection, auth
 **Repository:** Backend API
 **Status:** Backend development and testing
 
-## 📄 License
-
-Add the appropriate license information if this project will be distributed publicly.
