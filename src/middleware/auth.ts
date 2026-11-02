@@ -1,22 +1,60 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import { createRemoteJWKSet, jwtVerify, errors } from 'jose';
 
-export interface AuthRequest extends Request {
-  user?: any;
+export interface AuthUser {
+  id?: string;
+  email: string;
+  name?: string;
+  image?: string | null;
 }
 
-export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction) => {
-  const token = req.headers.authorization?.split(' ')[1];
+export interface AuthRequest extends Request {
+  user?: AuthUser;
+}
+
+let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
+
+const getJwks = () => {
+  if (!jwks) {
+    jwks = createRemoteJWKSet(new URL(process.env.JWKS_URL as string));
+  }
+  return jwks;
+};
+
+export const verifyToken = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  const header = req.headers.authorization;
+  const token = header?.startsWith('Bearer ') ? header.slice(7) : undefined;
 
   if (!token) {
     return res.status(401).json({ message: 'Unauthorized: No token provided' });
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
-    req.user = decoded;
+    const issuer = process.env.AUTH_ISSUER as string;
+
+    // BetterAuth signs with the issuer/audience set to its base URL
+    const { payload } = await jwtVerify(token, getJwks(), {
+      issuer,
+      audience: issuer,
+    });
+
+    if (typeof payload.email !== 'string' || !payload.email) {
+      return res.status(401).json({ message: 'Unauthorized: Invalid token payload' });
+    }
+
+    req.user = {
+      id: typeof payload.id === 'string' ? payload.id : payload.sub,
+      email: payload.email,
+      name: typeof payload.name === 'string' ? payload.name : undefined,
+      image: typeof payload.image === 'string' ? payload.image : null,
+    };
+
     next();
   } catch (error) {
-    return res.status(403).json({ message: 'Forbidden: Invalid token' });
+    if (error instanceof errors.JWTExpired) {
+      return res.status(401).json({ message: 'Unauthorized: Token expired' });
+    }
+    console.error('JWT verification failed:', error);
+    return res.status(401).json({ message: 'Unauthorized: Invalid token' });
   }
 };
