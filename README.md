@@ -73,7 +73,7 @@ Before running the server, make sure you have installed:
 ### 1. Clone the Repository
 
 ```bash
-git clone <[YOUR_GITHUB_REPOSITORY_URL](https://github.com/Irfan916/togetherwe-server.git)>
+git clone https://github.com/Irfan916/togetherwe-server.git
 ```
 
 Navigate to the backend directory:
